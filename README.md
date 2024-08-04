@@ -26,3 +26,7 @@
 + Visual Studio Code
 + Python 3.12.4 ('base') conda
 + PC
+
+# 3. 설치
+
+<a href="https://drive.google.com/file/d/1bqKd4mWKiM_YuYBQ5tW45RmImiRu7RYq/view?usp=drive_link" target="_blank">다운로드</a>
