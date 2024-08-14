@@ -5,6 +5,7 @@ from PyQt5.QtGui import QColor
 class Search:
     def __init__(self, gui_instance):
         self.gui_instance = gui_instance
+        
 
     def searchStock(self):
         search_query = self.gui_instance.line_insertItem.text().strip()
