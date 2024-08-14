@@ -5,7 +5,7 @@ from PyQt5 import uic
 import sys
 import StockData as SD  # 주식 데이터 처리 모듈
 from Search import Search 
-
+from Favorite import FavoriteOption
 Save = []
 ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
 
@@ -23,24 +23,28 @@ class StockDataLoader(QThread):
 class MyDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
-        self.setupUi()  # UI 설정 초기화
         self.watchlist = []  # 관심 종목 리스트 초기화
+        self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
+        self.Favorite_instance = FavoriteOption(self)
         self.dataLoader = StockDataLoader()  # StockDataLoader 인스턴스 생성
         self.dataLoader.dataLoaded.connect(self.updateTable)  # dataLoaded 시그널을 updateTable 슬롯에 연결
         self.timer = QTimer(self)  # QTimer 인스턴스 생성
         self.timer.timeout.connect(self.loadStockData)  # 타이머의 timeout 시그널을 loadStockData 메서드에 연결
-        self.timer.start(10000)  # 10초마다 타이머 실행
+        self.timer.start(3000)  # 10초마다 타이머 실행
         self.loadStockData()  # UI 초기화 후 데이터 로드
         self.Save = []  # Save 속성 초기화, 데이터를 저장할 리스트로 사용
+        self.setupUi()  # UI 설정 초기화
 
-    # UI 세팅
+     # UI 세팅
     def setupUi(self):
         uic.loadUi('tablewidgetTest.ui', self)  # UI 파일 로드
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
         self.pushButton.clicked.connect(self.Select_KorMarket)  # 국내
         self.btn_clearItem.clicked.connect(self.Select_USMarket)  # 해외
         self.btn_insertItem.clicked.connect(self.search_instance.searchStock)  # 검색 버튼 클릭 시 기능 연결
+        self.pushButton_2.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
+        self.pushButton_3.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
+
 
     # Update 주식
     def updateTable(self, stock_data):
@@ -48,8 +52,18 @@ class MyDialog(QDialog):
         if not stock_data:
             QMessageBox.warning(self, "정보", "현재 주식 데이터가 없습니다.")
             return
+    
+        # 주식 데이터를 테이블에 그리기
         DrawStock(self, stock_data)
-
+    
+        # 관심 종목 업데이트
+        for stock in self.Favorite_instance.watchlist:
+            updated_stock = next((item for item in stock_data if item['종목'] == stock['종목']), None)
+            if updated_stock:
+                stock.update(updated_stock)  # 관심 종목의 정보를 업데이트
+    
+        self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 갱신
+        
     def Select_KorMarket(self):
         global ThisStockPage
         ThisStockPage = "KR"
