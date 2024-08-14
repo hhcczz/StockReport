@@ -1,11 +1,15 @@
-from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox
+from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox, QCheckBox, QWidget, QHBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
 import sys
 import StockData as SD  # 주식 데이터 처리 모듈
 from Search import Search 
 from Favorite import FavoriteOption
+
+
+
 Save = []
 ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
 
@@ -18,11 +22,11 @@ class StockDataLoader(QThread):
         Save = stock_data
         self.dataLoaded.emit(stock_data)
 
-
-
 class MyDialog(QDialog):
     def __init__(self):
         super().__init__()
+        self.KR_CheckBoxBoolean = [False] * 200  # 체크박스 상태를 저장하는 리스트
+        self.US_CheckBoxBoolean = [False] * 200
         self.watchlist = []  # 관심 종목 리스트 초기화
         self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
         self.Favorite_instance = FavoriteOption(self)
@@ -44,6 +48,10 @@ class MyDialog(QDialog):
         self.btn_insertItem.clicked.connect(self.search_instance.searchStock)  # 검색 버튼 클릭 시 기능 연결
         self.pushButton_2.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
         self.pushButton_3.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
+        self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
+        self.tableWidget.setColumnWidth(5,20) #첫번째 열 크기 고정
+        self.tableWidget.setColumnWidth(0,200) #첫번째 열 크기 고정
+        
 
 
     # Update 주식
@@ -63,7 +71,50 @@ class MyDialog(QDialog):
                 stock.update(updated_stock)  # 관심 종목의 정보를 업데이트
     
         self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 갱신
-        
+        MyDialog.addCheckBoxesToTable(self)
+
+    
+    def addCheckBoxesToTable(self):
+        for row in range(self.tableWidget.rowCount()):
+            checkbox = QCheckBox()
+            checkbox.setChecked(self.KR_CheckBoxBoolean[row])  # 체크박스를 기본적으로 현재 상태로 설정
+            checkbox.stateChanged.connect(self.checkBoxStateChanged)  # 체크박스 상태 변경 시 기능 연결
+    
+            # 레이아웃을 사용하여 체크박스를 중앙에 배치
+            widget = QWidget()
+            layout = QHBoxLayout(widget)
+            layout.addWidget(checkbox)
+            layout.setAlignment(Qt.AlignCenter)  # 중앙 정렬
+            layout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
+            widget.setLayout(layout)
+    
+            self.tableWidget.setCellWidget(row, 5, widget)  # 체크박스는 6번째 열에 추가
+
+    def checkBoxStateChanged(self, state):
+        sender_checkbox = self.sender()  # 신호를 보낸 체크박스를 확인
+        for row in range(self.tableWidget.rowCount()):
+            widget = self.tableWidget.cellWidget(row, 5)
+            if widget is not None:
+                checkbox = widget.findChild(QCheckBox)
+                if checkbox == sender_checkbox:
+                    stock_name = self.tableWidget.item(row, 0).text()  # 주식 이름 가져오기
+                    if state == Qt.Checked:
+                        # 종목이 이미 관심 목록에 있는지 확인
+                        if not any(stock['종목'] == stock_name for stock in self.Favorite_instance.watchlist):
+                            self.KR_CheckBoxBoolean[row] = True
+                            print(f"{row} : {self.KR_CheckBoxBoolean[row]}")
+                            self.Favorite_instance.addToWatchList(self.Save, stock_name)  # 관심 종목 추가
+                    else:
+                        self.KR_CheckBoxBoolean[row] = False
+                        print(f"{row} : {self.KR_CheckBoxBoolean[row]}")
+                        # 관심 종목에서 제거하는 로직 추가
+                        self.Favorite_instance.watchlist = [stock for stock in self.Favorite_instance.watchlist if stock['종목'] != stock_name]
+
+                    # 관심 종목 목록 업데이트
+                    self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 업데이트
+                    break
+
+
     def Select_KorMarket(self):
         global ThisStockPage
         ThisStockPage = "KR"
