@@ -4,6 +4,7 @@ from PyQt5.QtGui import QColor
 from PyQt5 import uic
 import sys
 import StockData as SD  # 주식 데이터 처리 모듈
+from Search import Search 
 
 Save = []
 ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
@@ -17,9 +18,12 @@ class StockDataLoader(QThread):
         Save = stock_data
         self.dataLoaded.emit(stock_data)
 
+
+
 class MyDialog(QDialog):
     def __init__(self):
         super().__init__()
+        self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
         self.setupUi()  # UI 설정 초기화
         self.watchlist = []  # 관심 종목 리스트 초기화
         self.dataLoader = StockDataLoader()  # StockDataLoader 인스턴스 생성
@@ -28,6 +32,7 @@ class MyDialog(QDialog):
         self.timer.timeout.connect(self.loadStockData)  # 타이머의 timeout 시그널을 loadStockData 메서드에 연결
         self.timer.start(10000)  # 10초마다 타이머 실행
         self.loadStockData()  # UI 초기화 후 데이터 로드
+        self.Save = []  # Save 속성 초기화, 데이터를 저장할 리스트로 사용
 
     # UI 세팅
     def setupUi(self):
@@ -35,9 +40,11 @@ class MyDialog(QDialog):
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
         self.pushButton.clicked.connect(self.Select_KorMarket)  # 국내
         self.btn_clearItem.clicked.connect(self.Select_USMarket)  # 해외
+        self.btn_insertItem.clicked.connect(self.search_instance.searchStock)  # 검색 버튼 클릭 시 기능 연결
 
     # Update 주식
     def updateTable(self, stock_data):
+        self.Save = stock_data  # Save에 로드된 데이터를 저장
         if not stock_data:
             QMessageBox.warning(self, "정보", "현재 주식 데이터가 없습니다.")
             return
