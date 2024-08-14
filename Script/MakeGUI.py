@@ -8,8 +8,6 @@ import StockData as SD  # 주식 데이터 처리 모듈
 from Search import Search 
 from Favorite import FavoriteOption
 
-
-
 Save = []
 ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
 
@@ -43,16 +41,26 @@ class MyDialog(QDialog):
     def setupUi(self):
         uic.loadUi('tablewidgetTest.ui', self)  # UI 파일 로드
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
-        self.pushButton.clicked.connect(self.Select_KorMarket)  # 국내
-        self.btn_clearItem.clicked.connect(self.Select_USMarket)  # 해외
+        self.KR_Won.clicked.connect(self.Select_Kor_Market)  # 국내
+        self.US_KRW.clicked.connect(self.Select_US_KRWMarket)  # 해외 원화
+        self.US_Dollar.clicked.connect(self.Select_US_DollarMarket)  # 해외 달러
+        self.US_ETF.clicked.connect(self.Select_US_ETFMarket)  # 해외
+        #self.US_ETF_KRW.clicked.connect(self.Select_US_ETFMarket)  # 해외
         self.btn_insertItem.clicked.connect(self.search_instance.searchStock)  # 검색 버튼 클릭 시 기능 연결
-        self.pushButton_2.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
-        self.pushButton_3.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
+        self.Favorite_Add.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
+        self.Favorite_Remove.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
         self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
         self.tableWidget.setColumnWidth(5,20) #첫번째 열 크기 고정
         self.tableWidget.setColumnWidth(0,200) #첫번째 열 크기 고정
-        
 
+        # ETF - US_ETF
+        # Dollar - US_Dollar
+        # US_KRW - US_KRW
+        # KR - KR_Won
+        # ETF - US_ETF_KRW
+
+        # 관심종목추가 - Favorite_Add
+        # 관심종목제거 - Favorite_Remove
 
     # Update 주식
     def updateTable(self, stock_data):
@@ -115,14 +123,29 @@ class MyDialog(QDialog):
                     break
 
 
-    def Select_KorMarket(self):
+    def Select_Kor_Market(self):
         global ThisStockPage
         ThisStockPage = "KR"
         self.loadStockData()  # 데이터 로드
 
-    def Select_USMarket(self):
+    def Select_US_KRWMarket(self):
         global ThisStockPage
-        ThisStockPage = "US"
+        ThisStockPage = "US_KRW"
+        self.loadStockData()  # 데이터 로드
+
+    def Select_US_DollarMarket(self):
+        global ThisStockPage
+        ThisStockPage = "US_Dollar"
+        self.loadStockData()  # 데이터 로드
+
+    def Select_US_ETFMarket(self):
+        global ThisStockPage
+        ThisStockPage = "US_ETF_Dollar"
+        self.loadStockData()  # 데이터 로드
+
+    def Select_US_ETFKRWMarket(self):
+        global ThisStockPage
+        ThisStockPage = "US_ETF_KRW"
         self.loadStockData()  # 데이터 로드
 
     def loadStockData(self):
