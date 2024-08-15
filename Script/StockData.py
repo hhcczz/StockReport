@@ -49,9 +49,19 @@ def process_stock_price_data(stock_data, stock_names, stock_type):
         if stock_type in ["KR", "US_Dollar", "US_ETF_Dollar"]:
             close = price_info.get("close")
             base = price_info.get("base")
+            if stock_type == "KR":
+                close = str(int(float(close)))  # float를 int로 변환 후 문자열로 포맷
+                base = str(int(float(base)))    # float를 int로 변환 후 문자열로 포맷
+            # 달러로 표시되는 경우 소수점 2자리로 포맷팅
+            elif stock_type in ["US_Dollar", "US_ETF_Dollar"]:
+                close = f"{close:.2f}"
+                base = f"{base:.2f}"
         elif stock_type in ["US_KRW", "US_ETF_KRW"]:
             close = price_info.get("closeKrw")
             base = price_info.get("baseKrw")
+            # KRW 값은 소수점 없이 표시
+            close = str(int(float(close)))  # float를 int로 변환 후 문자열로 포맷
+            base = str(int(float(base)))    # float를 int로 변환 후 문자열로 포맷
         else:
             print("알 수 없는 통화 종류")
             close = "N/A"
