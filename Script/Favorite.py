@@ -5,7 +5,6 @@ class FavoriteOption:
     def __init__(self, favorite_instance):
         self.favorite_instance = favorite_instance
         self.watchlist = favorite_instance.watchlist  # Favorite_instance에서 watchlist 가져오기
-        self.my_dialog_instance = favorite_instance  # MyDialog 인스턴스 저장
         
     def updateWatchlist(self):
         # 관심 종목 목록 업데이트
@@ -15,12 +14,27 @@ class FavoriteOption:
             self.favorite_instance.tableWidget_2.insertRow(row_position)  # 새로운 행 추가
 
             name_item = QTableWidgetItem(stock['종목'])
-            Today_Price_item = QTableWidgetItem(format(int(stock['원(￦)']), ","))
-            RiseAndFalls_Percent_item = QTableWidgetItem(format(int(stock['원(￦)'] - stock['시작가']), ","))
-            Start_price_item = QTableWidgetItem(format(int(stock['시작가']), ","))
 
-            if stock['시작가'] != 0:  # 전날 가격이 0이 아닌 경우
-                change_percent = ((stock['원(￦)'] - stock['시작가']) / stock['시작가']) * 100
+            # stock['원(￦)']와 stock['시작가'] 값을 가져오고 None일 경우 기본값을 설정
+            price_str = str(stock.get('원(￦)', '0'))
+            start_price_str = str(stock.get('시작가', '0'))
+
+            # 소수점 여부에 따라 처리 분기
+            if '.' in price_str:  # 소수점이 있는 경우 (USD)
+                today_price = float(price_str)
+                start_price = float(start_price_str)
+                Today_Price_item = QTableWidgetItem(format(today_price, ",.2f"))
+                RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ",.2f"))
+                Start_price_item = QTableWidgetItem(format(start_price, ",.2f"))
+            else:  # 소수점이 없는 경우 (KRW)
+                today_price = int(price_str)
+                start_price = int(start_price_str)
+                Today_Price_item = QTableWidgetItem(format(today_price, ","))
+                RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ","))
+                Start_price_item = QTableWidgetItem(format(start_price, ","))
+
+            if start_price != 0:  # 전날 가격이 0이 아닌 경우
+                change_percent = ((today_price - start_price) / start_price) * 100
             else:
                 change_percent = 0  # 전날 가격이 0일 경우 변경률은 0으로 설정
 
