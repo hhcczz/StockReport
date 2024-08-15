@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox, QCheckBox, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QDialog, QTableWidget
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt
@@ -27,9 +28,18 @@ class MyDialog(QDialog):
         super().__init__()
         self.KR_CheckBoxBoolean = [False] * 200  # 체크박스 상태를 저장하는 리스트
         self.US_CheckBoxBoolean = [False] * 200
-        self.watchlist = []  # 관심 종목 리스트 초기화
+        
         self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
-        self.Favorite_instance = FavoriteOption(self)
+        
+        self.setupUi()  # UI 설정 초기화
+        
+        # 이제 FavoriteOption 인스턴스를 초기화
+        self.Favorite_instance = FavoriteOption(self)  # UI 설정 후에 FavoriteOption 인스턴스 생성
+        
+        # 여기에서 이벤트를 연결합니다
+        self.Favorite_Add.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
+        self.Favorite_Remove.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
+        
         self.dataLoader = StockDataLoader()  # StockDataLoader 인스턴스 생성
         self.dataLoader.dataLoaded.connect(self.updateTable)  # dataLoaded 시그널을 updateTable 슬롯에 연결
         self.timer = QTimer(self)  # QTimer 인스턴스 생성
@@ -37,9 +47,10 @@ class MyDialog(QDialog):
         self.timer.start(3000)  # 10초마다 타이머 실행
         self.loadStockData()  # UI 초기화 후 데이터 로드
         self.Save = []  # Save 속성 초기화, 데이터를 저장할 리스트로 사용
-        self.setupUi()  # UI 설정 초기화
+        
+        # 프로그램 종료 시 체크박스 상태 저장
+        self.finished.connect(self.Favorite_instance.saveCheckBoxStates)
 
-     # UI 세팅
     def setupUi(self):
         uic.loadUi('C:/Users/qimin/OneDrive/바탕 화면/Python/StockReport/tablewidgetTest.ui', self)
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
@@ -47,14 +58,21 @@ class MyDialog(QDialog):
         self.US_KRW.clicked.connect(self.Select_US_KRWMarket)  # 해외 원화
         self.US_Dollar.clicked.connect(self.Select_US_DollarMarket)  # 해외 달러
         self.US_ETF.clicked.connect(self.Select_US_ETFMarket)  # 해외
-        #self.US_ETF_KRW.clicked.connect(self.Select_US_ETFMarket)  # 해외
         self.btn_insertItem.clicked.connect(self.search_instance.searchStock)  # 검색 버튼 클릭 시 기능 연결
-        self.Favorite_Add.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
-        self.Favorite_Remove.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
-        self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
-        self.tableWidget.setColumnWidth(5,20) #첫번째 열 크기 고정
-        self.tableWidget.setColumnWidth(0,200) #첫번째 열 크기 고정
+        
+        self.tableWidget_2 = self.findChild(QTableWidget, "tableWidget_2")
+        if not self.tableWidget_2:
+            print("Error: tableWidget_2 could not be loaded")
 
+        self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
+        self.tableWidget.setColumnWidth(5, 20)  # 첫 번째 열 크기 고정
+        self.tableWidget.setColumnWidth(0, 200)  # 첫 번째 열 크기 고정
+
+    def closeEvent(self, event):
+        # 윈도우가 닫힐 때 체크박스 상태 저장
+        self.Favorite_instance.saveCheckBoxStates()
+        event.accept()
+            
         # ETF - US_ETF
         # Dollar - US_Dollar
         # US_KRW - US_KRW
@@ -87,9 +105,16 @@ class MyDialog(QDialog):
     def addCheckBoxesToTable(self):
         for row in range(self.tableWidget.rowCount()):
             checkbox = QCheckBox()
-            checkbox.setChecked(self.KR_CheckBoxBoolean[row])  # 체크박스를 기본적으로 현재 상태로 설정
+            # 페이지에 따라 체크박스 상태를 설정
+            if ThisStockPage == "KR":
+                checkbox.setChecked(self.KR_CheckBoxBoolean[row])
+            elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+                checkbox.setChecked(self.US_CheckBoxBoolean[row])
+            elif ThisStockPage == "US_ETF_Dollar":
+                checkbox.setChecked(self.US_ETF_CheckBoxBoolean[row])
+
             checkbox.stateChanged.connect(self.checkBoxStateChanged)  # 체크박스 상태 변경 시 기능 연결
-    
+
             # 레이아웃을 사용하여 체크박스를 중앙에 배치
             widget = QWidget()
             layout = QHBoxLayout(widget)
@@ -97,7 +122,7 @@ class MyDialog(QDialog):
             layout.setAlignment(Qt.AlignCenter)  # 중앙 정렬
             layout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
             widget.setLayout(layout)
-    
+
             self.tableWidget.setCellWidget(row, 5, widget)  # 체크박스는 6번째 열에 추가
 
     def checkBoxStateChanged(self, state):
@@ -111,19 +136,29 @@ class MyDialog(QDialog):
                     if state == Qt.Checked:
                         # 종목이 이미 관심 목록에 있는지 확인
                         if not any(stock['종목'] == stock_name for stock in self.Favorite_instance.watchlist):
-                            self.KR_CheckBoxBoolean[row] = True
-                            print(f"{row} : {self.KR_CheckBoxBoolean[row]}")
+                            if ThisStockPage == "KR":
+                                self.KR_CheckBoxBoolean[row] = True
+                            elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+                                self.US_CheckBoxBoolean[row] = True
+                            elif ThisStockPage == "US_ETF_Dollar":
+                                self.US_ETF_CheckBoxBoolean[row] = True
+
                             self.Favorite_instance.addToWatchList(self.Save, stock_name)  # 관심 종목 추가
                     else:
-                        self.KR_CheckBoxBoolean[row] = False
-                        print(f"{row} : {self.KR_CheckBoxBoolean[row]}")
+                        if ThisStockPage == "KR":
+                            self.KR_CheckBoxBoolean[row] = False
+                        elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+                            self.US_CheckBoxBoolean[row] = False
+                        elif ThisStockPage == "US_ETF_Dollar":
+                            self.US_ETF_CheckBoxBoolean[row] = False
+
                         # 관심 종목에서 제거하는 로직 추가
                         self.Favorite_instance.watchlist = [stock for stock in self.Favorite_instance.watchlist if stock['종목'] != stock_name]
 
-                    # 관심 종목 목록 업데이트
+                    # 관심 종목 목록 및 체크박스 상태 저장
                     self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 업데이트
+                    self.Favorite_instance.saveCheckBoxStates()  # 체크박스 상태 저장
                     break
-
 
     def Select_Kor_Market(self):
         global ThisStockPage
@@ -157,8 +192,7 @@ def DrawStock(self, Data):
     self.tableWidget.setRowCount(0)  
     sorted_data = sorted(Data, key=lambda stock: stock.get('number', 0))
     
-    for stock in sorted_data:
-        row_position = self.tableWidget.rowCount()  # 현재 테이블의 행 수 가져오기
+    for row_position, stock in enumerate(sorted_data):
         self.tableWidget.insertRow(row_position)  # 새로운 행 추가
 
         name_item = QTableWidgetItem(stock['종목'])
@@ -181,7 +215,26 @@ def DrawStock(self, Data):
             RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ","))
             Start_price_item = QTableWidgetItem(format(start_price, ","))
 
-        
+        # 기존 체크박스 상태 가져오기
+        if ThisStockPage == "KR":
+            checkbox_checked = self.KR_CheckBoxBoolean[row_position]
+        else:
+            checkbox_checked = self.US_CheckBoxBoolean[row_position]
+
+        # 체크박스 생성 및 상태 설정
+        checkbox = QCheckBox()
+        checkbox.setChecked(checkbox_checked)
+        checkbox.stateChanged.connect(self.checkBoxStateChanged)
+
+        # 레이아웃을 사용하여 체크박스를 중앙에 배치
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.addWidget(checkbox)
+        layout.setAlignment(Qt.AlignCenter)  # 중앙 정렬
+        layout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
+        widget.setLayout(layout)
+    
+        self.tableWidget.setCellWidget(row_position, 5, widget)  # 체크박스는 6번째 열에 추가
 
         if start_price != 0:  # 전날 가격이 0이 아닌 경우
             change_percent = ((today_price - start_price) / start_price) * 100
@@ -205,7 +258,6 @@ def DrawStock(self, Data):
         self.tableWidget.setItem(row_position, 2, RiseAndFalls_Percent_item)
         self.tableWidget.setItem(row_position, 3, RiseAndFalls_Price_item)
         self.tableWidget.setItem(row_position, 4, Start_price_item)
-
 
 # 애플리케이션 실행
 app = QApplication(sys.argv)
