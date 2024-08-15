@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox, QCheckBox, QWidget, QHBoxLayout
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor
@@ -39,7 +41,7 @@ class MyDialog(QDialog):
 
      # UI 세팅
     def setupUi(self):
-        uic.loadUi('tablewidgetTest.ui', self)  # UI 파일 로드
+        uic.loadUi('C:/Users/qimin/OneDrive/바탕 화면/Python/StockReport/tablewidgetTest.ui', self)
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
         self.KR_Won.clicked.connect(self.Select_Kor_Market)  # 국내
         self.US_KRW.clicked.connect(self.Select_US_KRWMarket)  # 해외 원화
@@ -160,12 +162,29 @@ def DrawStock(self, Data):
         self.tableWidget.insertRow(row_position)  # 새로운 행 추가
 
         name_item = QTableWidgetItem(stock['종목'])
-        Today_Price_item = QTableWidgetItem(format(int(stock['원(￦)']), ","))
-        RiseAndFalls_Percent_item = QTableWidgetItem(format(int(stock['원(￦)'] - stock['시작가']), ","))
-        Start_price_item = QTableWidgetItem(format(int(stock['시작가']), ","))
 
-        if stock['시작가'] != 0:  # 전날 가격이 0이 아닌 경우
-            change_percent = ((stock['원(￦)'] - stock['시작가']) / stock['시작가']) * 100
+        # stock['원(￦)']와 stock['시작가'] 값을 가져오고 None일 경우 기본값을 설정
+        price_str = str(stock.get('원(￦)', '0'))
+        start_price_str = str(stock.get('시작가', '0'))
+
+        # 소수점 여부에 따라 처리 분기
+        if '.' in price_str:  # 소수점이 있는 경우 (USD)
+            today_price = float(price_str)
+            start_price = float(start_price_str)
+            Today_Price_item = QTableWidgetItem(format(today_price, ",.2f"))
+            RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ",.2f"))
+            Start_price_item = QTableWidgetItem(format(start_price, ",.2f"))
+        else:  # 소수점이 없는 경우 (KRW)
+            today_price = int(price_str)
+            start_price = int(start_price_str)
+            Today_Price_item = QTableWidgetItem(format(today_price, ","))
+            RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ","))
+            Start_price_item = QTableWidgetItem(format(start_price, ","))
+
+        
+
+        if start_price != 0:  # 전날 가격이 0이 아닌 경우
+            change_percent = ((today_price - start_price) / start_price) * 100
         else:
             change_percent = 0  # 전날 가격이 0일 경우 변경률은 0으로 설정
 
@@ -186,6 +205,7 @@ def DrawStock(self, Data):
         self.tableWidget.setItem(row_position, 2, RiseAndFalls_Percent_item)
         self.tableWidget.setItem(row_position, 3, RiseAndFalls_Price_item)
         self.tableWidget.setItem(row_position, 4, Start_price_item)
+
 
 # 애플리케이션 실행
 app = QApplication(sys.argv)
