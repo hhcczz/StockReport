@@ -12,44 +12,46 @@ from Search import Search
 from Favorite import FavoriteOption
 
 Save = []
-ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
 
 class StockDataLoader(QThread):
     dataLoaded = pyqtSignal(list)
 
+    def __init__(self, dialog_instance):
+        super().__init__()
+        self.dialog_instance = dialog_instance  # MyDialog 인스턴스를 참조
+
     def run(self):
+        stock_data = SD.fetch_stock_data(self.dialog_instance.ThisStockPage)  # MyDialog 인스턴스를 통해 ThisStockPage에 접근
         global Save
-        stock_data = SD.fetch_stock_data(ThisStockPage)  # 데이터 가져오기
         Save = stock_data
         self.dataLoaded.emit(stock_data)
 
 class MyDialog(QDialog):
     def __init__(self):
         super().__init__()
-        self.KR_CheckBoxBoolean = [False] * 200  # 체크박스 상태를 저장하는 리스트
+        self.ThisStockPage = "KR"  # 기본 시장 설정을 한국으로
+        self.KR_CheckBoxBoolean = [False] * 200
         self.US_CheckBoxBoolean = [False] * 200
+        self.US_ETF_CheckBoxBoolean = [False] * 200
         
-        self.search_instance = Search(self)  # Search 클래스의 인스턴스 생성
+        self.search_instance = Search(self)
         
         self.setupUi()  # UI 설정 초기화
         
-        # 이제 FavoriteOption 인스턴스를 초기화
-        self.Favorite_instance = FavoriteOption(self)  # UI 설정 후에 FavoriteOption 인스턴스 생성
+        self.Favorite_instance = FavoriteOption(self)
         
-        # 여기에서 이벤트를 연결합니다
-        self.Favorite_Add.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)  # 관심 종목 추가 버튼 클릭
-        self.Favorite_Remove.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)  # 관심 종목 제거 버튼 클릭
+        self.Favorite_Add.clicked.connect(self.Favorite_instance.addSelectedStockToFavorites)
+        self.Favorite_Remove.clicked.connect(self.Favorite_instance.removeSelectedStockFromFavorites)
         
-        self.dataLoader = StockDataLoader()  # StockDataLoader 인스턴스 생성
-        self.dataLoader.dataLoaded.connect(self.updateTable)  # dataLoaded 시그널을 updateTable 슬롯에 연결
-        self.timer = QTimer(self)  # QTimer 인스턴스 생성
-        self.timer.timeout.connect(self.loadStockData)  # 타이머의 timeout 시그널을 loadStockData 메서드에 연결
-        self.timer.start(3000)  # 10초마다 타이머 실행
-        self.loadStockData()  # UI 초기화 후 데이터 로드
-        self.Save = []  # Save 속성 초기화, 데이터를 저장할 리스트로 사용
-        
-        # 프로그램 종료 시 체크박스 상태 저장
-        self.finished.connect(self.Favorite_instance.saveCheckBoxStates)
+        self.dataLoader = StockDataLoader(self)  # MyDialog 인스턴스를 전달
+        self.dataLoader.dataLoaded.connect(self.updateTable)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.loadStockData)
+        self.timer.start(10000)
+        self.loadStockData()
+        self.Save = []
+
+        self.finished.connect(self.Favorite_instance.saveCheckBoxStates)  # 윈도우가 닫힐 때 체크박스 상태 저장
 
     def setupUi(self):
         uic.loadUi('C:/Users/qimin/OneDrive/바탕 화면/Python/StockReport/tablewidgetTest.ui', self)
@@ -73,44 +75,35 @@ class MyDialog(QDialog):
         self.Favorite_instance.saveCheckBoxStates()
         event.accept()
             
-        # ETF - US_ETF
-        # Dollar - US_Dollar
-        # US_KRW - US_KRW
-        # KR - KR_Won
-        # ETF - US_ETF_KRW
-
-        # 관심종목추가 - Favorite_Add
-        # 관심종목제거 - Favorite_Remove
-
     # Update 주식
     def updateTable(self, stock_data):
         self.Save = stock_data  # Save에 로드된 데이터를 저장
         if not stock_data:
             QMessageBox.warning(self, "정보", "현재 주식 데이터가 없습니다.")
             return
-    
+
         # 주식 데이터를 테이블에 그리기
         DrawStock(self, stock_data)
-    
+
         # 관심 종목 업데이트
-        for stock in self.Favorite_instance.watchlist:
+        for stock in self.Favorite_instance.getWatchlistForCurrentPage(self.ThisStockPage):
             updated_stock = next((item for item in stock_data if item['종목'] == stock['종목']), None)
             if updated_stock:
                 stock.update(updated_stock)  # 관심 종목의 정보를 업데이트
-    
-        self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 갱신
-        MyDialog.addCheckBoxesToTable(self)
 
-    
+        self.Favorite_instance.updateWatchlist(self.ThisStockPage)  # 관심 종목 목록 갱신
+        self.addCheckBoxesToTable()  # 체크박스 상태 유지
+
     def addCheckBoxesToTable(self):
         for row in range(self.tableWidget.rowCount()):
             checkbox = QCheckBox()
-            # 페이지에 따라 체크박스 상태를 설정
-            if ThisStockPage == "KR":
+
+            # 현재 페이지에 따라 체크박스 상태를 설정
+            if self.ThisStockPage == "KR":
                 checkbox.setChecked(self.KR_CheckBoxBoolean[row])
-            elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+            elif self.ThisStockPage in ["US_Dollar", "US_KRW"]:
                 checkbox.setChecked(self.US_CheckBoxBoolean[row])
-            elif ThisStockPage == "US_ETF_Dollar":
+            elif self.ThisStockPage == "US_ETF_Dollar":
                 checkbox.setChecked(self.US_ETF_CheckBoxBoolean[row])
 
             checkbox.stateChanged.connect(self.checkBoxStateChanged)  # 체크박스 상태 변경 시 기능 연결
@@ -135,57 +128,48 @@ class MyDialog(QDialog):
                     stock_name = self.tableWidget.item(row, 0).text()  # 주식 이름 가져오기
                     if state == Qt.Checked:
                         # 종목이 이미 관심 목록에 있는지 확인
-                        if not any(stock['종목'] == stock_name for stock in self.Favorite_instance.watchlist):
-                            if ThisStockPage == "KR":
+                        if not any(stock['종목'] == stock_name for stock in self.Favorite_instance.getWatchlistForCurrentPage(self.ThisStockPage)):
+                            if self.ThisStockPage == "KR":
                                 self.KR_CheckBoxBoolean[row] = True
-                            elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+                            elif self.ThisStockPage in ["US_Dollar", "US_KRW"]:
                                 self.US_CheckBoxBoolean[row] = True
-                            elif ThisStockPage == "US_ETF_Dollar":
+                            elif self.ThisStockPage == "US_ETF_Dollar":
                                 self.US_ETF_CheckBoxBoolean[row] = True
 
                             self.Favorite_instance.addToWatchList(self.Save, stock_name)  # 관심 종목 추가
                     else:
-                        if ThisStockPage == "KR":
+                        if self.ThisStockPage == "KR":
                             self.KR_CheckBoxBoolean[row] = False
-                        elif ThisStockPage in ["US_Dollar", "US_KRW"]:
+                        elif self.ThisStockPage in ["US_Dollar", "US_KRW"]:
                             self.US_CheckBoxBoolean[row] = False
-                        elif ThisStockPage == "US_ETF_Dollar":
+                        elif self.ThisStockPage == "US_ETF_Dollar":
                             self.US_ETF_CheckBoxBoolean[row] = False
 
-                        # 관심 종목에서 제거하는 로직 추가
-                        self.Favorite_instance.watchlist = [stock for stock in self.Favorite_instance.watchlist if stock['종목'] != stock_name]
+                        self.Favorite_instance.removeSelectedStockFromFavorites(stock_name)  # 관심 종목에서 제거
 
                     # 관심 종목 목록 및 체크박스 상태 저장
-                    self.Favorite_instance.updateWatchlist()  # 관심 종목 목록 업데이트
+                    self.Favorite_instance.updateWatchlist(self.ThisStockPage)  # 관심 종목 목록 업데이트
                     self.Favorite_instance.saveCheckBoxStates()  # 체크박스 상태 저장
                     break
 
     def Select_Kor_Market(self):
-        global ThisStockPage
-        ThisStockPage = "KR"
+        self.ThisStockPage = "KR"
         self.loadStockData()  # 데이터 로드
 
     def Select_US_KRWMarket(self):
-        global ThisStockPage
-        ThisStockPage = "US_KRW"
+        self.ThisStockPage = "US_KRW"
         self.loadStockData()  # 데이터 로드
 
     def Select_US_DollarMarket(self):
-        global ThisStockPage
-        ThisStockPage = "US_Dollar"
+        self.ThisStockPage = "US_Dollar"
         self.loadStockData()  # 데이터 로드
 
     def Select_US_ETFMarket(self):
-        global ThisStockPage
-        ThisStockPage = "US_ETF_Dollar"
-        self.loadStockData()  # 데이터 로드
-
-    def Select_US_ETFKRWMarket(self):
-        global ThisStockPage
-        ThisStockPage = "US_ETF_KRW"
+        self.ThisStockPage = "US_ETF_Dollar"
         self.loadStockData()  # 데이터 로드
 
     def loadStockData(self):
+        self.dataLoader.start()  # 백그라운드 스레드 시작
         self.dataLoader.start()  # 백그라운드 스레드 시작
 
 def DrawStock(self, Data):
@@ -216,10 +200,12 @@ def DrawStock(self, Data):
             Start_price_item = QTableWidgetItem(format(start_price, ","))
 
         # 기존 체크박스 상태 가져오기
-        if ThisStockPage == "KR":
+        if self.ThisStockPage == "KR":
             checkbox_checked = self.KR_CheckBoxBoolean[row_position]
-        else:
+        elif self.ThisStockPage in ["US_Dollar", "US_KRW"]:
             checkbox_checked = self.US_CheckBoxBoolean[row_position]
+        elif self.ThisStockPage == "US_ETF_Dollar":
+            checkbox_checked = self.US_ETF_CheckBoxBoolean[row_position]
 
         # 체크박스 생성 및 상태 설정
         checkbox = QCheckBox()
