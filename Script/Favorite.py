@@ -117,7 +117,7 @@ class FavoriteOption:
             return self.watchlist_kr
         elif page in ["US_KRW", "US_Dollar"]:
             return self.watchlist_us
-        elif page == "US_ETF_Dollar":
+        elif page in ["US_ETF_Dollar", "US_ETF_KRW"]:
             return self.watchlist_etf
         else:
             return []
@@ -186,7 +186,7 @@ class FavoriteOption:
                 self.favorite_instance.KR_CheckBoxBoolean[selected_row] = True
             elif self.favorite_instance.ThisStockPage in ["US_Dollar", "US_KRW"]:
                 self.favorite_instance.US_CheckBoxBoolean[selected_row] = True
-            elif self.favorite_instance.ThisStockPage == "US_ETF_Dollar":
+            elif self.favorite_instance.ThisStockPage in ["US_ETF_Dollar", "US_ETF_KRW"]:
                 self.favorite_instance.US_ETF_CheckBoxBoolean[selected_row] = True
 
             # 파일로 저장 및 체크박스 상태 저장
@@ -228,7 +228,7 @@ class FavoriteOption:
                     self.favorite_instance.KR_CheckBoxBoolean[row] = False
                 elif self.favorite_instance.ThisStockPage in ["US_Dollar", "US_KRW"]:
                     self.favorite_instance.US_CheckBoxBoolean[row] = False
-                elif self.favorite_instance.ThisStockPage == "US_ETF_Dollar":
+                elif self.favorite_instance.ThisStockPage in ["US_ETF_Dollar", "US_ETF_KRW"]:
                     self.favorite_instance.US_ETF_CheckBoxBoolean[row] = False
 
                 # 테이블에서 체크박스 상태 해제 (UI 업데이트)
@@ -272,7 +272,7 @@ class FavoriteOption:
             self.watchlist_kr.append(stock_info)
         elif self.favorite_instance.ThisStockPage in ["US_KRW", "US_Dollar"]:
             self.watchlist_us.append(stock_info)
-        elif self.favorite_instance.ThisStockPage == "US_ETF_Dollar":
+        elif self.favorite_instance.ThisStockPage in ["US_ETF_Dollar", "US_ETF_KRW"]:
             self.watchlist_etf.append(stock_info)
         
         QMessageBox.information(self.favorite_instance, "정보", f"{stock_name}이(가) 관심 종목 목록에 추가되었습니다.")
