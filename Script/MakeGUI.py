@@ -3,7 +3,7 @@
 from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox, QCheckBox, QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QDialog, QTableWidget
 from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QDateTime, Qt
-from PyQt5.QtGui import QColor, QFont, QFontDatabase
+from PyQt5.QtGui import QColor, QFont, QFontDatabase, QPixmap, QImage, QIcon
 from PyQt5 import uic
 import sys
 import StockData as SD  # 주식 데이터 처리 모듈
@@ -79,6 +79,10 @@ class MyDialog(QDialog):
         uic.loadUi(ui_path, self)
 
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
+
+        # 열 헤더 숨기기
+        self.tableWidget.verticalHeader().setVisible(False)  # 행 헤더 숨기기 (옵션)
+
         self.KR_Won.clicked.connect(self.Select_Kor_Market)  # 국내
         self.US_KRW.clicked.connect(self.Select_US_KRWMarket)  # 해외 원화
         self.US_Dollar.clicked.connect(self.Select_US_DollarMarket)  # 해외 달러
@@ -92,8 +96,15 @@ class MyDialog(QDialog):
             print("Error: tableWidget_2 could not be loaded")
 
         self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
-        self.tableWidget.setColumnWidth(5, 20)  # 첫 번째 열 크기 고정
-        self.tableWidget.setColumnWidth(0, 200)  # 첫 번째 열 크기 고정
+        self.tableWidget_2.verticalHeader().setVisible(False)  # 행 헤더 숨기기 (옵션)
+
+        self.tableWidget.setColumnWidth(0, 30)  # 첫 번째 열 크기 고정
+        self.tableWidget.setColumnWidth(1, 200)  # 두 번째 열 크기 고정
+        self.tableWidget.setColumnWidth(6, 15)  # 두 번째 열 크기 고정
+
+        self.tableWidget_2.setColumnWidth(0, 30)  # 첫 번째 열 크기 고정
+        self.tableWidget_2.setColumnWidth(1, 200)  # 두 번째 열 크기 고정
+        self.tableWidget_2.setColumnWidth(6, 15)  # 두 번째 열 크기 고정
         self.applyStylesheet()
 
     def applyStylesheet(self):
@@ -252,16 +263,16 @@ class MyDialog(QDialog):
             layout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
             widget.setLayout(layout)
 
-            self.tableWidget.setCellWidget(row, 5, widget)  # 체크박스는 6번째 열에 추가
+            self.tableWidget.setCellWidget(row, 6, widget)  # 체크박스는 6번째 열에 추가
 
     def checkBoxStateChanged(self, state):
         sender_checkbox = self.sender()  # 신호를 보낸 체크박스를 확인
         for row in range(self.tableWidget.rowCount()):
-            widget = self.tableWidget.cellWidget(row, 5)
+            widget = self.tableWidget.cellWidget(row, 6)
             if widget is not None:
                 checkbox = widget.findChild(QCheckBox)
                 if checkbox == sender_checkbox:
-                    stock_name = self.tableWidget.item(row, 0).text()  # 주식 이름 가져오기
+                    stock_name = self.tableWidget.item(row, 1).text()  # 주식 이름 가져오기
                     if state == Qt.Checked:
                         # 종목이 이미 관심 목록에 있는지 확인
                         if not any(stock['종목'] == stock_name for stock in self.Favorite_instance.getWatchlistForCurrentPage(self.ThisStockPage)):
@@ -287,7 +298,7 @@ class MyDialog(QDialog):
                     self.Favorite_instance.updateWatchlist(self.ThisStockPage)  # 관심 종목 목록 업데이트
                     self.Favorite_instance.saveCheckBoxStates()  # 체크박스 상태 저장
                     break
-
+    
     def Select_Kor_Market(self):
         self.ThisStockPage = "KR"
         self.loadStockData()  # 데이터 로드
@@ -449,24 +460,61 @@ class MyDialog(QDialog):
 
     def loadStockData(self):
         self.dataLoader.start()  # 백그라운드 스레드 시작
+CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache_images')
+
+def ensure_cache_dir():
+    if not os.path.exists(CACHE_DIR):
+        os.makedirs(CACHE_DIR)
+
+def get_image_from_cache(stock_name):
+    # 이미지 캐시 파일 경로
+    cached_image_path = os.path.join(CACHE_DIR, f"{stock_name}.png")
+    if os.path.exists(cached_image_path):
+        return cached_image_path
+    return None
+
+def cache_image(stock_name, image_data):
+    cached_image_path = os.path.join(CACHE_DIR, f"{stock_name}.png")
+    with open(cached_image_path, 'wb') as file:
+        file.write(image_data)
+
+def load_image(stock_name):
+    # 캐시 디렉토리 확인
+    ensure_cache_dir()
+
+    # 캐시에서 이미지 로드
+    cached_image_path = get_image_from_cache(stock_name)
+    if cached_image_path:
+        return QPixmap(cached_image_path)
+
+    # 캐시에서 이미지가 없는 경우 다운로드
+    img_url = ImageLink.get(stock_name)
+    if img_url:
+        try:
+            response = requests.get(img_url)
+            image_data = response.content
+            cache_image(stock_name, image_data)  # 이미지 캐시 저장
+
+            # 이미지 파일을 QPixmap으로 변환
+            image = Image.open(BytesIO(image_data)).convert('RGBA')
+            qimg = QImage(image.tobytes(), image.width, image.height, image.width * 4, QImage.Format_RGBA8888)
+            pixmap = QPixmap.fromImage(qimg)
+            return pixmap
+        except Exception as e:
+            print(f"Error loading image for {stock_name}: {e}")
+    
+    return QPixmap()
 
 def DrawStock(self, Data):
     # 외부 폰트 파일 등록
     font_db = QFontDatabase()
-    
-    # 현재 파일의 디렉토리 경로를 가져옵니다.
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # 폰트 파일의 전체 경로를 만듭니다.
     font_path = os.path.join(current_dir, '강원교육모두B.ttf')
-
     font_id = font_db.addApplicationFont(font_path)
     font_family = font_db.applicationFontFamilies(font_id)[0] if font_id != -1 else "Arial"
-    
-    # 등록된 폰트 설정
     font = QFont(font_family, 10)  # 폰트 크기 10
-    
-    self.tableWidget.setRowCount(0)  
+
+    self.tableWidget.setRowCount(0)
     sorted_data = sorted(Data, key=lambda stock: stock.get('number', 0))
     
     for row_position, stock in enumerate(sorted_data):
@@ -534,35 +582,18 @@ def DrawStock(self, Data):
         RiseAndFalls_Percent_item.setForeground(color)
         RiseAndFalls_Percent_item.setFont(font)
 
-        # 기존 체크박스 상태 가져오기
-        if self.ThisStockPage == "KR":
-            checkbox_checked = self.KR_CheckBoxBoolean[row_position]
-        elif self.ThisStockPage in ["US_Dollar", "US_KRW"]:
-            checkbox_checked = self.US_CheckBoxBoolean[row_position]
-        elif self.ThisStockPage in ["US_ETF_Dollar", "US_ETF_KRW"]:
-            checkbox_checked = self.US_ETF_CheckBoxBoolean[row_position]
+        # 이미지 추가
+        pixmap = load_image(stock['종목'])
+        icon = QTableWidgetItem()
+        icon.setIcon(QIcon(pixmap))
+        self.tableWidget.setItem(row_position, 0, icon)  # 첫 번째 열에 이미지 설정
 
-        # 체크박스 생성 및 상태 설정
-        checkbox = QCheckBox()
-        checkbox.setChecked(checkbox_checked)
-        checkbox.stateChanged.connect(self.checkBoxStateChanged)
-
-        # 레이아웃을 사용하여 체크박스를 중앙에 배치
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        layout.addWidget(checkbox)
-        layout.setAlignment(Qt.AlignCenter)  # 중앙 정렬
-        layout.setContentsMargins(0, 0, 0, 0)  # 여백 제거
-        widget.setLayout(layout)
-    
-        self.tableWidget.setCellWidget(row_position, 5, widget)  # 체크박스는 6번째 열에 추가
-
-        # 데이터 항목 추가
-        self.tableWidget.setItem(row_position, 0, name_item)
-        self.tableWidget.setItem(row_position, 1, Today_Price_item)
-        self.tableWidget.setItem(row_position, 2, RiseAndFalls_Price_item)
-        self.tableWidget.setItem(row_position, 3, RiseAndFalls_Percent_item)
-        self.tableWidget.setItem(row_position, 4, Start_price_item)
+        # 나머지 데이터 항목 설정
+        self.tableWidget.setItem(row_position, 1, name_item)
+        self.tableWidget.setItem(row_position, 2, Today_Price_item)
+        self.tableWidget.setItem(row_position, 3, RiseAndFalls_Price_item)
+        self.tableWidget.setItem(row_position, 4, RiseAndFalls_Percent_item)
+        self.tableWidget.setItem(row_position, 5, Start_price_item)
 
 # 애플리케이션 실행
 app = QApplication(sys.argv)
