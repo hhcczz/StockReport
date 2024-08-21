@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QCheckBox
-from PyQt5.QtGui import QColor, QFont, QFontDatabase
+from PyQt5.QtGui import QColor, QFont, QFontDatabase, QIcon, QPixmap
+from PyQt5.QtCore import Qt
 import os
 import csv
 import json  # JSON 형식으로 저장하기 위해 필요
@@ -23,8 +24,8 @@ class FavoriteOption:
         self.checkbox_state_file_path = os.path.join(stock_report_dir, "checkbox_states.json")
 
         # 체크박스 상태 파일 경로 설정
-        self.checkbox_state_file_path = os.path.join(stock_report_dir, "checkbox_states.json")
-        
+        self.checkbox_state_file_path = os.path.join(stock_report_dir, "checkbox_states.json")# 열 헤더 숨기기
+
         # 초기화 시 파일에서 관심 종목과 체크박스 상태를 로드
         self.loadWatchlistFromFile()
         self.loadCheckBoxStates()
@@ -145,6 +146,12 @@ class FavoriteOption:
             row_position = self.favorite_instance.tableWidget_2.rowCount()
             self.favorite_instance.tableWidget_2.insertRow(row_position)
 
+            # 이미지 추가
+            image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'your_image_file.png')
+            icon = QTableWidgetItem()
+            icon.setIcon(QIcon(image_path))  # 이미지 아이콘 설정
+            self.favorite_instance.tableWidget_2.setItem(row_position, 0, icon)  # 첫 번째 열에 이미지 설정
+
             # 종목 데이터
             name_item = QTableWidgetItem(stock['종목'])
             name_item.setForeground(QColor("#c3c3c6"))  # 색상 변경
@@ -179,11 +186,11 @@ class FavoriteOption:
 
             # 등락(%) 포맷팅
             percent_change_str = f"{change_percent:+.2f}%"
-            
+
             # 새로운 QTableWidgetItem 객체 생성
             RiseAndFalls_Price_item = QTableWidgetItem(f" {price_change_str}")
             RiseAndFalls_Percent_item = QTableWidgetItem(f" {percent_change_str}")
-            
+
             # 색상 설정
             if change_percent > 6.0:
                 color = QColor("#ff0015")
@@ -199,18 +206,26 @@ class FavoriteOption:
                 color = QColor("#3182f6")
             else:
                 color = QColor("#c3c3c6")
-    
+
             # 색상 및 폰트 적용
             RiseAndFalls_Price_item.setForeground(color)
             RiseAndFalls_Price_item.setFont(font)
             RiseAndFalls_Percent_item.setForeground(color)
             RiseAndFalls_Percent_item.setFont(font)
+            
 
-            self.favorite_instance.tableWidget_2.setItem(row_position, 0, name_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 1, Today_Price_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 2, RiseAndFalls_Price_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 3, RiseAndFalls_Percent_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 4, Start_price_item)
+            # 이미지 추가
+            pixmap = load_image(stock['종목'])
+            icon = QTableWidgetItem()
+            icon.setIcon(QIcon(pixmap))
+            self.favorite_instance.tableWidget_2.setItem(row_position, 0, icon)  # 첫 번째 열에 이미지 설정
+
+            # 나머지 데이터 항목 설정
+            self.favorite_instance.tableWidget_2.setItem(row_position, 1, name_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 2, Today_Price_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 3, RiseAndFalls_Price_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 4, RiseAndFalls_Percent_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 5, Start_price_item)
 
     def addSelectedStockToFavorites(self):
         selected_row = self.favorite_instance.tableWidget.currentRow()  # 현재 선택된 행 가져오기
@@ -334,3 +349,17 @@ class FavoriteOption:
         self.saveWatchlistToFile()  # 파일로 저장
         self.saveCheckBoxStates()  # 체크박스 상태 저장
         self.updateWatchlist(self.favorite_instance.ThisStockPage)  # UI 업데이트
+
+# Helper function to load the image
+def load_image(stock_name):
+    # 절대 경로를 사용하여 경로를 설정합니다
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    image_path = os.path.join(current_dir, 'cache_images', f"{stock_name}.png")
+    pixmap = QPixmap(image_path)
+    
+    if pixmap.isNull():
+        print(f"Warning: Unable to load image for stock: {stock_name}")
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(Qt.gray)
+    
+    return pixmap
