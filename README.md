@@ -7,9 +7,9 @@
 
 <div align="center">
 
-  <img src="https://github.com/user-attachments/assets/99f28e47-57e6-4058-9a39-bb0c340e547b" width="33%" height="100%"/>
-  <img src="https://github.com/user-attachments/assets/4727a4f6-02ae-4a4c-8856-f841bd449340" width="33%" height="100%"/>
-  <img src="https://github.com/user-attachments/assets/50c53025-0d83-4469-a92e-4c1261dfb794" width="33%" height="100%"/>
+  <img src="https://github.com/user-attachments/assets/99f28e47-57e6-4058-9a39-bb0c340e547b" width="30%" height="100%"/>
+  <img src="https://github.com/user-attachments/assets/4727a4f6-02ae-4a4c-8856-f841bd449340" width="30%" height="100%"/>
+  <img src="https://github.com/user-attachments/assets/50c53025-0d83-4469-a92e-4c1261dfb794" width="30%" height="100%"/>
 
   < 프로그램 실행 사진 >
 </div>
