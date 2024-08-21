@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+
 from PyQt5.QtWidgets import QMessageBox, QTableWidgetItem, QCheckBox
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont, QFontDatabase
 import os
 import csv
 import json  # JSON 형식으로 저장하기 위해 필요
@@ -123,50 +125,91 @@ class FavoriteOption:
             return []
 
     def updateWatchlist(self, page):
+        # 외부 폰트 파일 등록
+        font_db = QFontDatabase()
+
+        # 현재 파일의 디렉토리 경로를 가져옵니다.
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # 폰트 파일의 전체 경로를 만듭니다.
+        font_path = os.path.join(current_dir, '강원교육모두B.ttf')
+
+        font_id = font_db.addApplicationFont(font_path)
+        font_family = font_db.applicationFontFamilies(font_id)[0] if font_id != -1 else "Arial"
+
+        # 등록된 폰트 설정
+        font = QFont(font_family, 10)  # 폰트 크기 10
         self.favorite_instance.tableWidget_2.setRowCount(0)  # 기존 행 제거
         watchlist = self.getWatchlistForCurrentPage(page)
         for stock in watchlist:
             row_position = self.favorite_instance.tableWidget_2.rowCount()
             self.favorite_instance.tableWidget_2.insertRow(row_position)
 
+            # 종목 데이터
             name_item = QTableWidgetItem(stock['종목'])
+            name_item.setForeground(QColor("#c3c3c6"))  # 색상 변경
+            name_item.setFont(font)  # 폰트 설정
+
             price_str = str(stock.get('원(￦)', '0'))
             start_price_str = str(stock.get('시작가', '0'))
 
-            if '.' in price_str:
+            if '.' in price_str:  # 소수점이 있는 경우 (USD)
                 today_price = float(price_str)
                 start_price = float(start_price_str)
-                Today_Price_item = QTableWidgetItem(format(today_price, ",.2f"))
-                RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ",.2f"))
-                Start_price_item = QTableWidgetItem(format(start_price, ",.2f"))
-            else:
+                Today_Price_item = QTableWidgetItem(f" {today_price:,.2f}")
+                Start_price_item = QTableWidgetItem(f" {start_price:,.2f}")
+            else:  # 소수점이 없는 경우 (KRW)
                 today_price = int(price_str)
                 start_price = int(start_price_str)
-                Today_Price_item = QTableWidgetItem(format(today_price, ","))
-                RiseAndFalls_Percent_item = QTableWidgetItem(format(today_price - start_price, ","))
-                Start_price_item = QTableWidgetItem(format(start_price, ","))
+                Today_Price_item = QTableWidgetItem(f" {today_price:,}")
+                Start_price_item = QTableWidgetItem(f" {start_price:,}")
 
+            # 등락(￦) 계산
+            price_change = today_price - start_price
+            if price_change > 0:
+                price_change_str = f"+{price_change:,.2f}" if '.' in price_str else f"+{price_change:,}"
+            else:
+                price_change_str = f"{price_change:,.2f}" if '.' in price_str else f"{price_change:,}"
+
+            # 등락(%) 계산
             if start_price != 0:
                 change_percent = ((today_price - start_price) / start_price) * 100
             else:
                 change_percent = 0
 
-            RiseAndFalls_Price_item = QTableWidgetItem(f"{change_percent:.2f}%")
-
-            if stock['등락'].startswith('UP'):
-                RiseAndFalls_Percent_item.setForeground(QColor("#f04452"))
-                RiseAndFalls_Price_item.setForeground(QColor("#f04452"))
-            elif stock['등락'].startswith('DOWN'):
-                RiseAndFalls_Percent_item.setForeground(QColor("#3182f6"))
-                RiseAndFalls_Price_item.setForeground(QColor("#3182f6"))
+            # 등락(%) 포맷팅
+            percent_change_str = f"{change_percent:+.2f}%"
+            
+            # 새로운 QTableWidgetItem 객체 생성
+            RiseAndFalls_Price_item = QTableWidgetItem(f" {price_change_str}")
+            RiseAndFalls_Percent_item = QTableWidgetItem(f" {percent_change_str}")
+            
+            # 색상 설정
+            if change_percent > 6.0:
+                color = QColor("#ff0015")
+            elif change_percent > 3.0:
+                color = QColor("#f32b3b")
+            elif change_percent > 0:
+                color = QColor("#f04452")
+            elif change_percent < -6.0:
+                color = QColor("#0068ff")
+            elif change_percent < -3.0:
+                color = QColor("#1b75f7")
+            elif change_percent < 0:
+                color = QColor("#3182f6")
             else:
-                RiseAndFalls_Percent_item.setForeground(QColor("#333d4b"))
-                RiseAndFalls_Price_item.setForeground(QColor("#333d4b"))
+                color = QColor("#c3c3c6")
+    
+            # 색상 및 폰트 적용
+            RiseAndFalls_Price_item.setForeground(color)
+            RiseAndFalls_Price_item.setFont(font)
+            RiseAndFalls_Percent_item.setForeground(color)
+            RiseAndFalls_Percent_item.setFont(font)
 
             self.favorite_instance.tableWidget_2.setItem(row_position, 0, name_item)
             self.favorite_instance.tableWidget_2.setItem(row_position, 1, Today_Price_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 2, RiseAndFalls_Percent_item)
-            self.favorite_instance.tableWidget_2.setItem(row_position, 3, RiseAndFalls_Price_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 2, RiseAndFalls_Price_item)
+            self.favorite_instance.tableWidget_2.setItem(row_position, 3, RiseAndFalls_Percent_item)
             self.favorite_instance.tableWidget_2.setItem(row_position, 4, Start_price_item)
 
     def addSelectedStockToFavorites(self):
