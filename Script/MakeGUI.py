@@ -2,9 +2,8 @@
 
 from PyQt5.QtWidgets import QApplication, QDialog, QTableWidgetItem, QMessageBox, QCheckBox, QWidget, QHBoxLayout
 from PyQt5.QtWidgets import QDialog, QTableWidget
-from PyQt5.QtCore import QThread, pyqtSignal, QTimer
+from PyQt5.QtCore import QThread, pyqtSignal, QTimer, QDateTime, Qt
 from PyQt5.QtGui import QColor, QFont, QFontDatabase
-from PyQt5.QtCore import Qt
 from PyQt5 import uic
 import sys
 import StockData as SD  # 주식 데이터 처리 모듈
@@ -59,10 +58,26 @@ class MyDialog(QDialog):
         self.loadStockData()
         self.Save = []
 
+        # 타이머 설정
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.updateDateTime)  # 타이머가 끝날 때마다 updateDateTime 호출
+        self.timer.start(1000)  # 1초마다 업데이트
+
         self.finished.connect(self.Favorite_instance.saveCheckBoxStates)  # 윈도우가 닫힐 때 체크박스 상태 저장
 
+    def updateDateTime(self):
+    # 현재 시간을 가져와서 QDateTimeEdit 위젯에 설정
+        current_time = QDateTime.currentDateTime()
+        self.dateTimeEdit.setDateTime(current_time)
+
     def setupUi(self):
-        uic.loadUi('C:/Users/U308-13/OneDrive/바탕 화면/StockReport/tablewidgetTest.ui', self)
+        # 현재 파일의 디렉토리 경로를 가져옵니다.
+        current_dir = os.path.dirname(os.path.abspath(__file__))           
+        # UI 파일의 전체 경로를 만듭니다.
+        ui_path = os.path.join(current_dir, 'tablewidgetTest.ui')        
+        # UI 파일을 로드합니다.
+        uic.loadUi(ui_path, self)
+
         self.tableWidget.setRowCount(0)  # 기존 테이블 행 제거
         self.KR_Won.clicked.connect(self.Select_Kor_Market)  # 국내
         self.US_KRW.clicked.connect(self.Select_US_KRWMarket)  # 해외 원화
@@ -79,6 +94,111 @@ class MyDialog(QDialog):
         self.tableWidget.cellClicked.connect(self.checkBoxStateChanged)  # 체크박스 클릭 시 기능 연결
         self.tableWidget.setColumnWidth(5, 20)  # 첫 번째 열 크기 고정
         self.tableWidget.setColumnWidth(0, 200)  # 첫 번째 열 크기 고정
+        self.applyStylesheet()
+
+    def applyStylesheet(self):
+        style_sheet = """
+        QDialog {
+            background-color: #101013; 
+            color: #FFFFFF;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        } 
+        QTableWidget {
+            background-color: #202027;
+            gridline-color: #4F545C;
+            color: #c3c3c6;
+            border: none;
+        }
+        QTableCornerButton::section{
+            background-color: #202027;
+        }
+
+        QScrollBar:vertical, QScrollBar:horizontal {
+            background-color: #202027;  /* 스크롤바 트랙 색상 */
+            border: none;
+        }
+
+        QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+            background-color: #4F545C;  /* 스크롤바 핸들 색상 */
+        }
+
+        QScrollBar::add-line, QScrollBar::sub-line {
+            background-color: #202027;  /* 스크롤바 끝 부분 색상 */
+            border: none;
+        }
+
+        QScrollBar::add-page, QScrollBar::sub-page {
+            background-color: #202027;  /* 스크롤바 트랙 나머지 색상 */
+        }
+
+        QHeaderView{
+            background-color: #202027;
+        }
+        QHeaderView::section {
+            background-color: #202027;
+            color: #c3c3c6;
+            padding: 5px;
+            border: none;
+        }
+        QTableWidget::item {
+            background-color: #202027;
+            padding: 2px;
+        }
+        QTableWidget::item:selected {
+            background-color: #7289DA;
+            color: #c3c3c6;
+        }
+        QPushButton {
+            background-color: #202027;
+            color: #c3c3c6;
+            border: 1px solid #4F545C;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        QPushButton:hover {
+            background-color: #62626d;
+        }
+        QCheckBox {
+            color: #c3c3c6;
+        }
+        QMessageBox {
+            background-color: #202027;
+            color: #202027;
+        }
+        QLabel {
+            color: #c3c3c6;
+        }
+        QLineEdit{
+            background-color: #202027;
+            color: #c3c3c6;
+            border: 1px solid #202027;  /* 테두리 색상 */
+        }
+
+        QDateTimeEdit {
+            background-color: #202027;
+            color: #c3c3c6;
+        }
+        QAbstractSpinBox::up-button {
+            width: 0px;  
+            height: 0px;
+        }
+        QAbstractSpinBox::down-button {
+            width: 0px;  
+            height: 0px;
+        }
+
+        QCheckBox::indicator:unchecked {
+            background-color: #202027;  /* 체크되지 않은 상태의 배경 색상 */
+            border: 1px solid #c3c3c6;  /* 테두리 색상 */
+        }
+
+        QCheckBox::indicator:unchecked:hover {
+            background-color: #2c2c34;  /* 체크되지 않은 상태에서 마우스 오버 시 색상 */
+        }
+
+        """
+        self.setStyleSheet(style_sheet)
 
     def closeEvent(self, event):
         # 윈도우가 닫힐 때 체크박스 상태 저장
@@ -196,22 +316,43 @@ class MyDialog(QDialog):
         weekday_kr = ["월", "화", "수", "목", "금", "토", "일"]
         weekday = weekday_kr[datetime.today().weekday()]
         header_text = f"{current_date} ({weekday}) - {now.strftime('%H:%M:%S')}"
-
+    
         # 바탕화면에 StockReport 폴더 생성
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
         stock_report_dir = os.path.join(desktop_path, "StockReport", current_date)
         os.makedirs(stock_report_dir, exist_ok=True)
-
+    
         # 폰트 설정
-        font_path = "C:\\Users\\U308-13\\Desktop\\강원교육모두B.ttf"
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        font_path = os.path.join(current_dir, '강원교육모두B.ttf')
+    
         try:
             font = ImageFont.truetype(font_path, 18)
             header_font = ImageFont.truetype(font_path, 24, encoding="unic")
         except IOError:
-            # 폰트 파일을 찾을 수 없을 경우 기본 폰트 사용
             font = ImageFont.load_default()
             header_font = ImageFont.load_default()
-
+    
+        # ETF 기준으로 가로 길이 설정
+        row_height = 42  # 원래 크기에서 30% 줄인 크기
+        headers = ["    ", "종목", "현재가", "등락(￦)", "등락(%)"]
+    
+        # 종목 열의 너비를 ETF 기준으로 크게 설정
+        stock_col_width = max(font.getbbox(headers[1])[2], 200) + 100
+        fixed_col_widths = [
+            row_height,  # 사진 열의 너비는 이미지 크기와 동일
+            stock_col_width,  # 종목 열의 너비
+            max(font.getbbox(headers[2])[2], 100) + 20,  # 현재가 열 너비
+            max(font.getbbox(headers[3])[2], 100) + 20,  # 등락(￦) 열 너비
+            max(font.getbbox(headers[4])[2], 100) + 20,  # 등락(%) 열 너비
+        ]
+    
+        # ETF 기준으로 고정된 이미지 너비 설정
+        image_width = 800  # ETF에 맞춘 고정 이미지 너비
+    
+        # 각 열의 시작 X 좌표 계산 (표를 중앙에 배치하기 위해)
+        col_start_x = [sum(fixed_col_widths[:i]) + (image_width - sum(fixed_col_widths)) // 2 for i in range(len(fixed_col_widths))]
+    
         # 각 관심 종목 그룹에 대해 별도로 이미지를 생성하고 저장
         for group_name, group_data in [
             ("KR", self.Favorite_instance.watchlist_kr),
@@ -219,48 +360,26 @@ class MyDialog(QDialog):
             ("ETF", self.Favorite_instance.watchlist_etf)
         ]:
             if group_data:
+                header_text = f"{current_date} ({weekday}) - {now.strftime('%H:%M:%S')} - {group_name}"  # 그룹명 추가
                 # 이미지 크기 및 백그라운드 설정
-                image_width = 650  # 이미지 너비 고정
-                row_height = 42  # 원래 크기에서 30% 줄인 크기
                 image_height = 100 + len(group_data) * row_height  # 데이터 양에 따라 이미지 높이 조절
                 background_color = "#17171c"
                 img = Image.new('RGBA', (image_width, image_height), color=background_color)
                 draw = ImageDraw.Draw(img)
-
-                # 헤더 텍스트 작성
-                draw.text((10, 10), header_text, font=header_font, fill="#e4e4e5")
-
+    
+                # 표의 시작 위치를 기준으로 헤더 텍스트를 왼쪽 정렬
+                header_x = col_start_x[0]  # 첫 번째 열의 시작 X 좌표에 맞추어 왼쪽 정렬
+    
+                # 헤더 텍스트 작성 (왼쪽 정렬)
+                draw.text((header_x, 10), header_text, font=header_font, fill="#c3c3c6")
+    
                 # 표의 시작 위치
                 table_start_y = 60
-                # 각 열의 최대 너비 계산
-                headers = ["    ", "종목", "현재가", "등락(￦)", "등락(%)"]
-
-                # 종목 열의 너비를 크게 설정
-                stock_col_width = max(draw.textbbox((0, 0), headers[1], font=font)[2], 
-                                      max(draw.textbbox((0, 0), stock['종목'], font=font)[2] for stock in group_data)) + 100
-
-                # 나머지 열의 너비를 고정
-                fixed_col_widths = [
-                    row_height,  # 사진 열의 너비는 이미지 크기와 동일
-                    stock_col_width,  # 종목 열의 너비
-                    max(draw.textbbox((0, 0), headers[2], font=font)[2], 100) + 20,  # 현재가 열 너비
-                    max(draw.textbbox((0, 0), headers[3], font=font)[2], 100) + 20,  # 등락(￦) 열 너비
-                    max(draw.textbbox((0, 0), headers[4], font=font)[2], 100) + 20,  # 등락(%) 열 너비
-                ]
-
-                # 전체 너비가 700이 되도록 열 너비 조정
-                total_fixed_width = sum(fixed_col_widths)
-                if total_fixed_width > image_width:
-                    scale_factor = image_width / total_fixed_width
-                    fixed_col_widths = [width * scale_factor for width in fixed_col_widths]
-
-                # 각 열의 시작 X 좌표 계산
-                col_start_x = [sum(fixed_col_widths[:i]) + 10 for i in range(len(fixed_col_widths))]
-
+    
                 # 표 헤더 작성
                 for i, header in enumerate(headers):
-                    draw.text((col_start_x[i], table_start_y), header, font=font, fill="#e4e4e5")
-
+                    draw.text((col_start_x[i], table_start_y), header, font=font, fill="#c3c3c6")
+    
                 # 표 데이터 작성
                 for row_idx, stock in enumerate(group_data):
                     today_price = float(stock['원(￦)'].replace(',', '').replace('원', '').strip())
@@ -269,14 +388,30 @@ class MyDialog(QDialog):
                         change_percent = ((today_price - start_price) / start_price) * 100
                     else:
                         change_percent = 0
-
+    
                     price_change = today_price - start_price
                     rise_and_falls_won = f"{price_change:+,.0f}원"  # 등락(￦) 계산
-                    rise_and_falls_percent = f"{change_percent:.2f}%"  # 등락(%) 계산
-
+                    rise_and_falls_percent = f"{change_percent:+.2f}%"  # 등락(%) 계산 - 여기서 + 추가
+    
+                    # 색상 설정
+                    if change_percent > 6.0:
+                        color = "#ff0015"  # 큰 상승
+                    elif change_percent > 3.0:
+                        color = "#f32b3b"  # 상승
+                    elif change_percent > 0:
+                        color = "#f04452"  # 소폭 상승
+                    elif change_percent < -6.0:
+                        color = "#0068ff"  # 큰 하락
+                    elif change_percent < -3.0:
+                        color = "#1b75f7"  # 하락
+                    elif change_percent < 0:
+                        color = "#3182f6"  # 소폭 하락
+                    else:
+                        color = "#c3c3c6"  # 변동 없음
+    
                     # 종목 이름 줄이기 (예: 40자 이상이면 "..."로 축약)
                     stock_name = textwrap.shorten(stock['종목'], width=40, placeholder="...")
-
+    
                     # 이미지 삽입 (종목 이미지 로드)
                     img_url = ImageLink.get(stock['종목'])
                     if img_url:
@@ -284,18 +419,16 @@ class MyDialog(QDialog):
                         response = requests.get(modified_url)
                         logo = Image.open(BytesIO(response.content)).convert('RGBA')
                         logo = logo.resize((row_height, row_height), Image.Resampling.LANCZOS)
-                        img_x = col_start_x[0]
-                        img_y = table_start_y + (row_idx + 1) * row_height
-                        img.paste(logo, (img_x - 10, img_y - 10), logo)  # 투명도 유지
-
+                        img_x = col_start_x[0] - 10
+                        img_y = table_start_y + (row_idx + 1) * row_height - 10
+                        img.paste(logo, (img_x, img_y), logo)  # 투명도 유지
+    
                     # 각 셀에 텍스트 작성
                     draw.text((col_start_x[1], table_start_y + (row_idx + 1) * row_height), stock_name, font=font, fill="#e4e4e5")
                     draw.text((col_start_x[2], table_start_y + (row_idx + 1) * row_height), f"{today_price:,.0f}원", font=font, fill="#e4e4e5")
-                    draw.text((col_start_x[3], table_start_y + (row_idx + 1) * row_height), rise_and_falls_won, font=font,
-                              fill="#f04452" if price_change > 0 else "#3182f6")
-                    draw.text((col_start_x[4], table_start_y + (row_idx + 1) * row_height), rise_and_falls_percent, font=font,
-                              fill="#f04452" if price_change > 0 else "#3182f6")
-
+                    draw.text((col_start_x[3], table_start_y + (row_idx + 1) * row_height), rise_and_falls_won, font=font, fill=color)
+                    draw.text((col_start_x[4], table_start_y + (row_idx + 1) * row_height), rise_and_falls_percent, font=font, fill=color)
+    
                 # 테두리 그리기
                 for row_idx in range(len(group_data) + 1):
                     for col_idx in range(len(headers)):
@@ -303,15 +436,15 @@ class MyDialog(QDialog):
                         y0 = table_start_y + row_idx * row_height - 10
                         x1 = col_start_x[col_idx] + fixed_col_widths[col_idx] - 10
                         y1 = table_start_y + (row_idx + 1) * row_height - 10
-
+    
                         # 테두리 두께를 3으로 설정하여 진하게 그리기
                         draw.rectangle([x0, y0, x1, y1], outline="black", width=1)
-
+    
                 # 파일 이름 설정 및 저장
                 filename = f"{current_date} ({weekday}) - {current_time} - {group_name}주식.png"
                 filepath = os.path.join(stock_report_dir, filename)
                 img.save(filepath)
-
+    
                 QMessageBox.information(self, "정보", f"{group_name} 그룹의 종목 이미지가 저장되었습니다: {filepath}")
 
     def loadStockData(self):
@@ -320,12 +453,18 @@ class MyDialog(QDialog):
 def DrawStock(self, Data):
     # 외부 폰트 파일 등록
     font_db = QFontDatabase()
-    font_id = font_db.addApplicationFont("C:\\Users\\U308-13\\Desktop\\강원교육모두B.ttf")
+    
+    # 현재 파일의 디렉토리 경로를 가져옵니다.
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 폰트 파일의 전체 경로를 만듭니다.
+    font_path = os.path.join(current_dir, '강원교육모두B.ttf')
+
+    font_id = font_db.addApplicationFont(font_path)
     font_family = font_db.applicationFontFamilies(font_id)[0] if font_id != -1 else "Arial"
     
     # 등록된 폰트 설정
     font = QFont(font_family, 10)  # 폰트 크기 10
-    header_font = QFont(font_family, 12, QFont.Bold)  # 폰트 크기 12, Bold
     
     self.tableWidget.setRowCount(0)  
     sorted_data = sorted(Data, key=lambda stock: stock.get('number', 0))
@@ -335,38 +474,31 @@ def DrawStock(self, Data):
 
         # 종목 데이터
         name_item = QTableWidgetItem(stock['종목'])
-        name_item.setForeground(QColor("#e4e4e5"))  # 색상 변경
+        name_item.setForeground(QColor("#c3c3c6"))  # 색상 변경
         name_item.setFont(font)  # 폰트 설정
 
         # stock['원(￦)']와 stock['시작가'] 값을 가져오고 None일 경우 기본값을 설정
         price_str = str(stock.get('원(￦)', '0'))
         start_price_str = str(stock.get('시작가', '0'))
 
-        # 소수점 여부에 따라 처리 분기
         if '.' in price_str:  # 소수점이 있는 경우 (USD)
             today_price = float(price_str)
             start_price = float(start_price_str)
-            Today_Price_item = QTableWidgetItem(f" {format(today_price, ',.2f')}")
-            Start_price_item = QTableWidgetItem(f" {format(start_price, ',.2f')}")
+            Today_Price_item = QTableWidgetItem(f" {today_price:,.2f}")
+            Start_price_item = QTableWidgetItem(f" {start_price:,.2f}")
         else:  # 소수점이 없는 경우 (KRW)
             today_price = int(price_str)
             start_price = int(start_price_str)
-            Today_Price_item = QTableWidgetItem(f" {format(today_price, ',')}")
-            Start_price_item = QTableWidgetItem(f" {format(start_price, ',')}")
-
-        # 색상 설정
-        Today_Price_item.setForeground(QColor("#e4e4e5"))  # 색상 변경
-        Start_price_item.setForeground(QColor("#e4e4e5"))  # 색상 변경
-        Today_Price_item.setFont(font)  # 폰트 설정
-        Start_price_item.setFont(font)  # 폰트 설정
+            Today_Price_item = QTableWidgetItem(f" {today_price:,}")
+            Start_price_item = QTableWidgetItem(f" {start_price:,}")
 
         # 등락(￦) 계산
         price_change = today_price - start_price
         if price_change > 0:
-            price_change_str = f"+{price_change:,.0f}"
+            price_change_str = f"+{price_change:,.2f}" if '.' in price_str else f"+{price_change:,}"
         else:
-            price_change_str = f"{price_change:,.0f}"
-        
+            price_change_str = f"{price_change:,.2f}" if '.' in price_str else f"{price_change:,}"
+
         # 등락(%) 계산
         if start_price != 0:
             change_percent = ((today_price - start_price) / start_price) * 100
@@ -379,17 +511,28 @@ def DrawStock(self, Data):
         # 새로운 QTableWidgetItem 객체 생성
         RiseAndFalls_Price_item = QTableWidgetItem(f" {price_change_str}")
         RiseAndFalls_Percent_item = QTableWidgetItem(f" {percent_change_str}")
-        
-        # 색상 설정
-        if price_change > 0:
-            RiseAndFalls_Price_item.setForeground(QColor("#f04452"))
-            RiseAndFalls_Percent_item.setForeground(QColor("#f04452"))
-        else:
-            RiseAndFalls_Price_item.setForeground(QColor("#3182f6"))
-            RiseAndFalls_Percent_item.setForeground(QColor("#3182f6"))
 
-        RiseAndFalls_Price_item.setFont(font)  # 폰트 설정
-        RiseAndFalls_Percent_item.setFont(font)  # 폰트 설정
+        # 색상 설정
+        if change_percent > 6.0:
+            color = QColor("#ff0015")
+        elif change_percent > 3.0:
+            color = QColor("#f32b3b")
+        elif change_percent > 0:
+            color = QColor("#f04452")
+        elif change_percent < -6.0:
+            color = QColor("#0068ff")
+        elif change_percent < -3.0:
+            color = QColor("#1b75f7")
+        elif change_percent < 0:
+            color = QColor("#3182f6")
+        else:
+            color = QColor("#c3c3c6")
+
+        # 색상 및 폰트 적용
+        RiseAndFalls_Price_item.setForeground(color)
+        RiseAndFalls_Price_item.setFont(font)
+        RiseAndFalls_Percent_item.setForeground(color)
+        RiseAndFalls_Percent_item.setFont(font)
 
         # 기존 체크박스 상태 가져오기
         if self.ThisStockPage == "KR":
