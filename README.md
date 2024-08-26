@@ -39,7 +39,3 @@
 + Python 3.12.4 ('base') conda
 + UTF-8
 + PC
-
-# 4. 설치
-
-링크 추가 예정
