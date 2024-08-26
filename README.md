@@ -5,8 +5,12 @@
 
 # 1. 소개
 
-<div align="center">
+<div align="TOP">
+  <img src="https://github.com/user-attachments/assets/e705f639-6640-4c8d-8fff-b06bcbb6fb2b" width="90%" height="90%"/>
+</div>
 
+<div align="center">
+  
   <img src="https://github.com/user-attachments/assets/99f28e47-57e6-4058-9a39-bb0c340e547b" width="30%" height="100%"/>
   <img src="https://github.com/user-attachments/assets/4727a4f6-02ae-4a4c-8856-f841bd449340" width="30%" height="100%"/>
   <img src="https://github.com/user-attachments/assets/50c53025-0d83-4469-a92e-4c1261dfb794" width="30%" height="100%"/>
