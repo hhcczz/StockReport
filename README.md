@@ -6,7 +6,7 @@
 # 1. 소개
 
 <div align="TOP">
-  <img src="https://github.com/user-attachments/assets/e705f639-6640-4c8d-8fff-b06bcbb6fb2b" width="90%" height="90%"/>
+  <img src="https://github.com/user-attachments/assets/e705f639-6640-4c8d-8fff-b06bcbb6fb2b" width="100%" height="100%"/>
 </div>
 
 <div align="center">
