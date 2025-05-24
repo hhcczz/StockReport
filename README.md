@@ -1,4 +1,4 @@
-# StockReport
+# [Program] StockReport
 > Toss에서 크롤링해 주식 정보 보기 프로그램
 
 <br>
